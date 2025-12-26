@@ -3,8 +3,8 @@ import app from "./app.js";
 import connectDB from "./config/db.js";
 import cors from "cors";
 app.use(cors({
-  origin: "http://localhost:5173", // Your frontend URL
-  credentials: true
+  origin: true,
+  credentials: true,
 }));
 dotenv.config();
 
