@@ -10,7 +10,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // 🔑 Resolve project root (folder that contains BOTH Backend & ai-agent)
-const projectRoot = path.resolve(__dirname, "../../../..");
+// Backend root
+const backendRoot = path.resolve(__dirname, "../..");
+
+// ai-agent is sibling of Backend
+const aiAgentDir = path.resolve(backendRoot, "../ai-agent");
+
 
 export const uploadDocument = async (req, res) => {
   try {
@@ -28,30 +33,33 @@ export const uploadDocument = async (req, res) => {
     });
 
     // ✅ Correct Python executable (venv)
-    const pythonExecutable = path.join(
-      projectRoot,
-      "RAG_Agent/ai-agent/venv/bin/python"
-    );
+    const pythonExecutable =
+  process.env.NODE_ENV === "production"
+    ? "python3"
+    : path.join(aiAgentDir, "venv/bin/python");
+
 
     // ✅ Correct indexing script path
-    const scriptPath = path.join(
-      projectRoot,
-      "RAG_Agent/ai-agent/index_documents.py"
-    );
+    const scriptPath = path.join(aiAgentDir, "index_documents.py");
+
 
     const filePath = path.resolve(req.file.path);
 
-    console.log('Project root:', projectRoot);
-console.log('Python executable:', pythonExecutable);
-console.log('Script path:', scriptPath);
-console.log('Python exists:', fs.existsSync(pythonExecutable));
-console.log('Script exists:', fs.existsSync(scriptPath));
+    console.log("ENV:", process.env.NODE_ENV);
+console.log("Python:", pythonExecutable);
+console.log("Script:", scriptPath);
+console.log("Python exists:", pythonExecutable === "python3" ? "system" : fs.existsSync(pythonExecutable));
+console.log("Script exists:", fs.existsSync(scriptPath));
+
 
     const pythonProcess = spawn(
-      pythonExecutable,
-      [scriptPath, filePath, document._id.toString()],
-      { cwd: projectRoot }
-    );
+  pythonExecutable,
+  [scriptPath, filePath, document._id.toString()],
+  {
+    cwd: aiAgentDir
+  }
+);
+
 
     let output = "";
     let errorOutput = "";
