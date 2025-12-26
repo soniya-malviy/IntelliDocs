@@ -7,13 +7,30 @@ import path from "path";
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
-app.use(cors({
-  origin: [
-    "http://localhost:5173",                       // local dev
-    "https://intelli-docs-dn98umuob-soniya-malviyas-projects.vercel.app"
-  ],
-  credentials: true,
-}));
+const allowedOrigins = [
+  "http://localhost:5173", // local dev
+  "https://intelli-docs-q65vcpjh-soniya-malviyas-projects.vercel.app", // vercel
+  "https://intelli-docs-ten.vercel.app" // (if you have another)
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // allow requests with no origin (Postman, curl)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        return callback(new Error("CORS not allowed"));
+      }
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
 dotenv.config();
 
 // Connect database
