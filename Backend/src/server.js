@@ -14,10 +14,37 @@ import connectDB from "./config/db.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-/* ------------------ FLEXIBLE CORS ------------------ */
-app.use(cors()); // Enables all CORS requests
+app.use((req, res, next) => {
+  console.log(`📨 ${req.method} ${req.url} from origin: ${req.headers.origin || 'no origin'}`);
+  next();
+});
 
+// PERMISSIVE CORS MIDDLEWARE
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Auth-Token");
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.header("Access-Control-Expose-Headers", "Content-Length, Content-Type, Authorization");
+  res.header("Access-Control-Max-Age", "86400"); // 24 hours
+  
+  // Handle preflight requests
+  if (req.method === "OPTIONS") {
+    console.log("🛬 Handling OPTIONS preflight request");
+    return res.status(200).end();
+  }
+  
+  next();
+});
 
+// Also use cors package as backup
+app.use(cors({
+  origin: "*",
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: "*",
+  exposedHeaders: "*"
+}));
 
 /* ------------------ DATABASE ------------------ */
 connectDB();
@@ -41,5 +68,7 @@ const PORT = process.env.PORT || 5001;
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`🌐 CORS: All origins allowed`);
+  console.log(`🌐 CORS: ALL origins allowed (*)`);
+  console.log(`📡 Accessible at: http://localhost:${PORT}`);
+  
 });
