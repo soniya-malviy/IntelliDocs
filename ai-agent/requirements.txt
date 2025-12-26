@@ -1,7 +1,8 @@
 faiss-cpu
 sentence-transformers
+pypdf
+langchain
 langchain-text-splitters
+numpy
 python-dotenv
 openai
-numpy
-pypdf
