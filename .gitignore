@@ -1,0 +1,23 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Env files
+.env
+.env.*
+
+# Uploads & vector data
+uploads/
+ai-agent/vector_store/
+
+# OS
+.DS_Store
+
+# Build
+dist/
+build/
