@@ -6,53 +6,46 @@ import cors from "cors";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { dirname } from "path";
 
 import app from "./app.js";
 import connectDB from "./config/db.js";
 
 /* ------------------ PATH SETUP ------------------ */
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = path.dirname(__filename);
 
-/* ------------------ ALLOWED ORIGINS ------------------ */
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://intelli-docs-q65vcpjh-soniya-malviyas-projects.vercel.app",
-  "https://intelli-docs-ten.vercel.app",
-];
+/* ------------------ FLEXIBLE CORS ------------------ */
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, postman)
+    if (!origin) return callback(null, true);
+    
+    // You can still add specific logic here if needed
+    // Example: Allow all origins in development, restrict in production
+    if (process.env.NODE_ENV === 'development') {
+      return callback(null, true);
+    }
+    
+    // For production, you might want to add your domain checks here
+    // For now, allow all
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
 
-/* ------------------ CORS (🔥 FIXED) ------------------ */
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // allow Postman / server-to-server
-      if (!origin) return callback(null, true);
-
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(null, false); // ❌ DO NOT throw error
-      }
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
-
-// 🔥 THIS IS REQUIRED FOR PREFLIGHT
-app.options("*", cors());
+// Handle preflight requests
+app.options('*', cors());
 
 /* ------------------ DATABASE ------------------ */
 connectDB();
 
 /* ------------------ UPLOADS DIR ------------------ */
 const ensureUploadsDir = () => {
-  const uploadsDir =
-    process.env.NODE_ENV === "production"
-      ? "/tmp/uploads"
-      : path.join(__dirname, "..", "uploads");
+  const uploadsDir = process.env.NODE_ENV === "production"
+    ? "/tmp/uploads"
+    : path.join(__dirname, "..", "uploads");
 
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
@@ -67,4 +60,5 @@ const PORT = process.env.PORT || 5001;
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🌐 CORS: All origins allowed`);
 });
