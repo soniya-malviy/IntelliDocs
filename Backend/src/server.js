@@ -15,28 +15,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /* ------------------ FLEXIBLE CORS ------------------ */
-app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl, postman)
-    if (!origin) return callback(null, true);
-    
-    // You can still add specific logic here if needed
-    // Example: Allow all origins in development, restrict in production
-    if (process.env.NODE_ENV === 'development') {
-      return callback(null, true);
-    }
-    
-    // For production, you might want to add your domain checks here
-    // For now, allow all
-    return callback(null, true);
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-}));
+app.use(cors()); // Enables all CORS requests
 
-// Handle preflight requests
-app.options('*', cors());
+
 
 /* ------------------ DATABASE ------------------ */
 connectDB();
