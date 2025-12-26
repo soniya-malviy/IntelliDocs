@@ -17,7 +17,16 @@ const backendRoot = path.resolve(__dirname, "../..");
 const aiAgentDir = path.resolve(backendRoot, "../ai-agent");
 
 
+
+
 export const uploadDocument = async (req, res) => {
+
+    const getUploadsDir = () => {
+  return process.env.NODE_ENV === 'production'
+    ? '/tmp/uploads'
+    : path.join(process.cwd(), 'uploads');
+};
+
   try {
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
@@ -43,7 +52,9 @@ export const uploadDocument = async (req, res) => {
     const scriptPath = path.join(aiAgentDir, "index_documents.py");
 
 
-    const filePath = path.resolve(req.file.path);
+    const filePath = path.join(getUploadsDir(), req.file.filename);
+console.log('File will be saved to:', filePath);
+
 
     console.log("ENV:", process.env.NODE_ENV);
 console.log("Python:", pythonExecutable);
