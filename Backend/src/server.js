@@ -8,7 +8,10 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
 app.use(cors({
-  origin: true,
+  origin: [
+    "http://localhost:5173",                       // local dev
+    "https://intelli-docs-dn98umuob-soniya-malviyas-projects.vercel.app"
+  ],
   credentials: true,
 }));
 dotenv.config();
