@@ -1,64 +1,61 @@
 import express from "express";
 import cors from "cors";
+import path from "path";
+import dotenv from "dotenv";
 
 import authRoutes from "./routes/authRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
 import queryRoutes from "./routes/queryRoutes.js";
-import path from "path";
 
-import dotenv from "dotenv";
+/* ---------------- ENV ---------------- */
 dotenv.config();
 
 const app = express();
 
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
-
-
-
+/* ---------------- CORS ---------------- */
 const allowedOrigins = process.env.CORS_ORIGINS
-  ? process.env.CORS_ORIGINS.split(",")
+  ? process.env.CORS_ORIGINS.split(",").map(o => o.trim())
   : [];
 
-console.log("cors", process.env.CORS_ORIGINS);
+console.log("✅ Allowed CORS Origins:", allowedOrigins);
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // allow server-to-server, curl, postman
-    if (!origin) return callback(null, true);
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow server-to-server, curl, Postman
+      if (!origin) return callback(null, true);
 
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
 
-    return callback(new Error(`CORS blocked for origin: ${origin}`));
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
+      return callback(
+        new Error(`❌ CORS blocked for origin: ${origin}`)
+      );
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
-/* ---------- BODY PARSER ---------- */
+// ✅ Correct preflight handler (Node 20 safe)
+
+
+/* ---------------- MIDDLEWARE ---------------- */
 app.use(express.json());
 
-/* ---------- ROUTES ---------- */
+/* ---------------- ROUTES ---------------- */
 app.use("/api/auth", authRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/documents", queryRoutes);
 
+/* ---------------- HEALTH ---------------- */
 app.get("/api/health", (req, res) => {
-  res.json({ 
+  res.json({
     status: "Server running 🚀",
-    environment: process.env.NODE_ENV || 'development',
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Test endpoint for CORS
-app.get("/api/test-cors", (req, res) => {
-  res.json({ 
-    message: "CORS is working!",
-    origin: req.headers.origin,
-    timestamp: new Date().toISOString()
+    env: process.env.NODE_ENV,
+    time: new Date().toISOString(),
   });
 });
 
