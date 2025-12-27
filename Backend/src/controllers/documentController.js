@@ -16,74 +16,61 @@ const backendRoot = path.resolve(__dirname, "../..");
 // ai-agent is sibling of Backend
 const aiAgentDir = path.resolve(backendRoot, "../ai-agent");
 
-
-
-
 export const uploadDocument = async (req, res) => {
-
-    const getUploadsDir = () => {
-  return process.env.NODE_ENV === 'production'
-    ? '/tmp/uploads'
-    : path.join(process.cwd(), 'uploads');
-};
-
   try {
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
     }
 
+    // Resolve uploads directory
+    const uploadsDir =
+      process.env.NODE_ENV === "production"
+        ? "/tmp/uploads"
+        : path.join(process.cwd(), "uploads");
+
+    // Store relative path (important for portability)
+    const relativePath = path.relative(process.cwd(), req.file.path);
+
+    // Create document in DB with "processing" status
     const document = await Document.create({
       userId: req.user._id,
       originalName: req.file.originalname,
-      filePath: req.file.path,
+      filePath: relativePath,
       mimeType: req.file.mimetype,
       size: req.file.size,
-      status: "uploaded",
+      status: "processing",
     });
 
-    // ✅ Correct Python executable (venv)
+    // Python executable
     const pythonExecutable =
-  process.env.NODE_ENV === "production"
-    ? "python3"
-    : path.join(aiAgentDir, "venv/bin/python");
+      process.env.NODE_ENV === "production"
+        ? "python3"
+        : path.join(aiAgentDir, "venv/bin/python");
 
-
-    // ✅ Correct indexing script path
     const scriptPath = path.join(aiAgentDir, "index_documents.py");
 
+    // Debug logs
+    console.log("Starting document processing:", {
+      documentId: document._id,
+      filePath: req.file.path,
+      python: pythonExecutable,
+      script: scriptPath,
+      pythonExists:
+        pythonExecutable === "python3"
+          ? "system"
+          : fs.existsSync(pythonExecutable),
+      scriptExists: fs.existsSync(scriptPath),
+    });
 
-    const filePath = path.join(getUploadsDir(), req.file.filename);
-console.log('File will be saved to:', filePath);
-
-
-    console.log("ENV:", process.env.NODE_ENV);
-console.log("Python:", pythonExecutable);
-console.log("Script:", scriptPath);
-console.log("Python exists:", pythonExecutable === "python3" ? "system" : fs.existsSync(pythonExecutable));
-console.log("Script exists:", fs.existsSync(scriptPath));
-
-
+    // Spawn Python process
     const pythonProcess = spawn(
-  pythonExecutable,
-  [scriptPath, filePath, document._id.toString()],
-  {
-    cwd: aiAgentDir
-  }
-);
-
+      pythonExecutable,
+      [scriptPath, req.file.path, document._id.toString()],
+      { cwd: aiAgentDir }
+    );
 
     let output = "";
     let errorOutput = "";
-
-    pythonProcess.on("error", async (err) => {
-      console.error("Python spawn failed:", err);
-      document.status = "failed";
-      await document.save();
-      return res.status(500).json({
-        message: "Failed to start document processing",
-        error: err.message,
-      });
-    });
 
     pythonProcess.stdout.on("data", (data) => {
       output += data.toString();
@@ -93,17 +80,31 @@ console.log("Script exists:", fs.existsSync(scriptPath));
       errorOutput += data.toString();
     });
 
+    pythonProcess.on("error", async (err) => {
+      console.error("Python spawn error:", err);
+      document.status = "failed";
+      await document.save();
+
+      return res.status(500).json({
+        message: "Failed to start document processing",
+        error: err.message,
+      });
+    });
+
     pythonProcess.on("close", async (code) => {
       if (code !== 0 || !output.includes("INDEXING_SUCCESS")) {
         console.error("Indexing failed:", errorOutput);
+
         document.status = "failed";
         await document.save();
+
         return res.status(500).json({
           message: "Document processing failed",
-          error: errorOutput,
+          error: errorOutput || "Unknown indexing error",
         });
       }
 
+      // Success
       document.status = "processed";
       await document.save();
 
@@ -125,6 +126,8 @@ console.log("Script exists:", fs.existsSync(scriptPath));
   }
 };
 
+
+
 export const getDocuments = async (req, res) => {
   try {
     const documents = await Document.find({ userId: req.user._id })
@@ -138,6 +141,8 @@ export const getDocuments = async (req, res) => {
 
 
 export const deleteDocument = async (req, res) => {
+
+    
   try {
     const { id } = req.params;
     

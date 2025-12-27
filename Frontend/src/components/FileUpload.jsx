@@ -15,6 +15,8 @@ const uploadFile = async () => {
   const formData = new FormData();
   formData.append("file", file);
 
+  
+
   try {
     setLoading(true);
     const res = await api.post("/documents/upload", formData, {
