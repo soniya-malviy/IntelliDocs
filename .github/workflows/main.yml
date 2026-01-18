@@ -1,0 +1,85 @@
+name: IntelliDocs CI Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  backend:
+    name: Backend (Node.js)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: "npm"
+
+      - name: Install backend dependencies (if present)
+        run: |
+          if [ -d backend ]; then
+            echo "Backend directory found"
+            cd backend
+            npm ci
+          else
+            echo "No backend directory — skipping backend install"
+          fi
+
+      - name: Run backend tests (if present)
+        run: |
+          if [ -d backend ] && npm --prefix backend run | grep -q test; then
+            npm --prefix backend test
+          else
+            echo "No backend tests or backend directory — skipping"
+          fi
+
+  ai-agent:
+    name: AI Agent (Python RAG)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Python dependencies (if ai-agent exists)
+        run: |
+          if [ -d ai-agent ]; then
+            echo "AI agent directory found"
+            python -m pip install --upgrade pip
+            pip install langchain
+            pip install langchain-community
+            pip install langchain-text-splitters
+            pip install sentence-transformers
+            pip install pypdf
+            pip install faiss-cpu
+          else
+            echo "No ai-agent directory — skipping Python setup"
+          fi
+
+      - name: Verify Python environment
+        run: |
+          if [ -d ai-agent ]; then
+            python -c "import faiss, sentence_transformers; print('AI dependencies OK')"
+          else
+            echo "AI agent not present — skipping verification"
+          fi
+
+      - name: Compile Python files (syntax check)
+        run: |
+          if [ -d ai-agent ]; then
+            python -m compileall ai-agent
+          else
+            echo "No ai-agent directory — skipping compile step"
+          fi
