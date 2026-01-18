@@ -59,17 +59,85 @@ def retrieve_chunks(question, doc_id, k=3):
 
 
 # ---------------- OPENAI GENERATION ----------------
-def openai_generate(system_prompt, user_prompt):
-    response = client.chat.completions.create(
-        model=MODEL_NAME,
-        messages=[
+def openai_generate(system_prompt, user_prompt, call_type="GENERAL"):
+    # Log what's being sent to OpenAI
+    print(f"\n{'='*60}", file=sys.stderr)
+    print(f"🔵 OpenAI API Call: {call_type}", file=sys.stderr)
+    print(f"{'='*60}", file=sys.stderr)
+    
+    # Extract query/question from user_prompt if it contains "Question:"
+    query_sent = None
+    context_sent = None
+    if "Question:" in user_prompt:
+        parts = user_prompt.split("Question:")
+        if len(parts) > 1:
+            context_part = parts[0].replace("Context:", "").strip() if "Context:" in parts[0] else None
+            query_part = parts[1].strip()
+            if context_part:
+                context_sent = context_part
+                query_sent = query_part.split("\n")[0].strip()
+            else:
+                query_sent = query_part.split("\n")[0].strip()
+    
+    if query_sent:
+        print(f"📝 QUERY SENT TO OpenAI: {query_sent[:200]}...", file=sys.stderr)
+    
+    if context_sent:
+        context_length = len(context_sent)
+        print(f"📄 CONTEXT SENT (NOT FULL PDF): {context_length} characters", file=sys.stderr)
+        print(f"   First 200 chars: {context_sent[:200]}...", file=sys.stderr)
+        print(f"   ✅ This is RETRIEVED CHUNKS, NOT the full PDF", file=sys.stderr)
+    else:
+        # Check if it's facts/key points
+        if "Facts:" in user_prompt:
+            print(f"📋 KEY POINTS SENT (extracted facts, not full PDF)", file=sys.stderr)
+        else:
+            print(f"📝 Only query/question sent (no context)", file=sys.stderr)
+    
+    # Log the request data to stderr
+    request_data = {
+        "model": MODEL_NAME,
+        "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
-        temperature=0.2,
-    )
+        "temperature": 0.2,
+    }
+    print(f"\n📤 Full Request Data:", file=sys.stderr)
+    print(json.dumps({
+        "model": request_data["model"],
+        "system_prompt_length": len(system_prompt),
+        "user_prompt_length": len(user_prompt),
+        "temperature": request_data["temperature"]
+    }, indent=2), file=sys.stderr)
+    print(f"{'='*60}\n", file=sys.stderr)
+    
+    # Make the actual API call
+    response = client.chat.completions.create(**request_data)
+    
+    # Log the response to stderr
+    print(f"\n{'='*60}", file=sys.stderr)
+    print(f"📥 OpenAI API Response", file=sys.stderr)
+    print(f"{'='*60}", file=sys.stderr)
+    print(json.dumps({
+        "id": response.id,
+        "model": response.model,
+        "usage": {
+            "prompt_tokens": response.usage.prompt_tokens,
+            "completion_tokens": response.usage.completion_tokens,
+            "total_tokens": response.usage.total_tokens,
+        },
+        "choices": [{
+            "message": {
+                "role": response.choices[0].message.role,
+                "content": response.choices[0].message.content[:200] + "..." if len(response.choices[0].message.content) > 200 else response.choices[0].message.content
+            },
+            "finish_reason": response.choices[0].finish_reason
+        }]
+    }, indent=2), file=sys.stderr)
+    print(f"{'='*60}\n", file=sys.stderr)
+    
     return response.choices[0].message.content.strip()
-
 
 # ---------------- STAGE 1: GROUNDED ANSWER ----------------
 def grounded_answer(question, context):
@@ -92,7 +160,7 @@ Answer not found in the document.
 Otherwise, write ONE clear factual paragraph.
 """
 
-    return openai_generate(system_prompt, user_prompt)
+    return openai_generate(system_prompt, user_prompt, "GROUNDED_ANSWER")
 
 
 # ---------------- FACT EXTRACTION ----------------
@@ -125,15 +193,31 @@ Write a clean, well-structured final answer.
 Do NOT add new information.
 """
 
-    return openai_generate(system_prompt, user_prompt)
+    return openai_generate(system_prompt, user_prompt, "REFINE_ANSWER")
 
 
 # ---------------- MAIN RAG PIPELINE ----------------
 def answer_question(question, doc_id):
+    print(f"\n{'='*60}", file=sys.stderr)
+    print(f"🚀 STARTING RAG QUERY PROCESS", file=sys.stderr)
+    print(f"{'='*60}", file=sys.stderr)
+    print(f"❓ ORIGINAL QUESTION: {question}", file=sys.stderr)
+    print(f"📚 Document ID: {doc_id}", file=sys.stderr)
+    
     chunks = retrieve_chunks(question, doc_id)
     context = "\n".join(chunks)
+    
+    print(f"\n📦 RETRIEVED CHUNKS INFO:", file=sys.stderr)
+    print(f"   Number of chunks: {len(chunks)}", file=sys.stderr)
+    print(f"   Total context length: {len(context)} characters", file=sys.stderr)
+    print(f"   ✅ Sending ONLY these {len(chunks)} relevant chunks to OpenAI", file=sys.stderr)
+    print(f"   ❌ NOT sending the full PDF", file=sys.stderr)
+    print(f"   First chunk preview: {chunks[0][:150] if chunks else 'N/A'}...", file=sys.stderr)
+    print(f"{'='*60}\n", file=sys.stderr)
 
     raw_answer = grounded_answer(question, context)
+
+    
 
     if raw_answer.lower().startswith("answer not found"):
         return {
@@ -144,8 +228,9 @@ def answer_question(question, doc_id):
         }
 
     key_points = extract_key_points(raw_answer)
+    # print(key_points)
     final_answer = refine_answer(question, key_points)
-
+    # print(final_answer)
     return {
         "answer": final_answer,
         "key_points": key_points,

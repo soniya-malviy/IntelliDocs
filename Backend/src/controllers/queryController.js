@@ -28,12 +28,14 @@ export const queryDocument = async (req, res) => {
       "ai-agent/query_rag.py"
     );
 
-    console.log('Running query with:', {
-      python: pythonExecutable,
-      script: scriptPath,
-      question: question.substring(0, 50) + '...',
-      docId
-    });
+    console.log('\n========================================');
+    console.log('🔍 QUERY REQUEST RECEIVED');
+    console.log('========================================');
+    console.log('📝 Question:', question);
+    console.log('📚 Document ID:', docId);
+    console.log('🐍 Python executable:', pythonExecutable);
+    console.log('📄 Script path:', scriptPath);
+    console.log('========================================\n');
 
     const pythonProcess = spawn(pythonExecutable, [
       scriptPath,
@@ -52,6 +54,8 @@ export const queryDocument = async (req, res) => {
 
     pythonProcess.stderr.on('data', (data) => {
       errorOutput += data.toString();
+      // Print Python stderr output (which includes our console logs) to Node.js console
+      process.stderr.write(data);
     });
 
     pythonProcess.on('close', (code) => {
