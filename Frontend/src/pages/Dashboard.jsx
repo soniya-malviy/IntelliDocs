@@ -35,7 +35,10 @@ export default function Dashboard() {
         const res = await api.get("/auth/me");
         setUser(res.data);
       } catch (error) {
-        console.error("Failed to load user", error);
+        // Don't log 401 errors - they're handled by axios interceptor
+        if (error.response?.status !== 401) {
+          console.error("Failed to load user", error);
+        }
       }
     };
 
@@ -68,7 +71,10 @@ export default function Dashboard() {
         setSelectedDocumentId(response.data[0]._id);
       }
     } catch (error) {
-      console.error('Error loading documents:', error);
+      // Don't log 401 errors - they're handled by axios interceptor
+      if (error.response?.status !== 401) {
+        console.error('Error loading documents:', error);
+      }
     }
   };
 
@@ -85,7 +91,10 @@ export default function Dashboard() {
         setSelectedDocumentId(response.data[0]._id);
       }
     } catch (error) {
-      console.error("Error fetching documents:", error);
+      // Don't log 401 errors - they're handled by axios interceptor
+      if (error.response?.status !== 401) {
+        console.error("Error fetching documents:", error);
+      }
     } finally {
       setLoading(false);
     }
@@ -151,7 +160,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 to-black text-gray-200">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-gray-950 to-black text-gray-200 overflow-hidden">
       {/* Mobile Header */}
       <div className="lg:hidden bg-gray-800 border-b border-gray-700 p-4">
         <div className="flex items-center justify-between">
@@ -165,7 +174,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="flex">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Sidebar */}
         <div className={`
           fixed lg:static inset-y-0 left-0 z-50
@@ -173,6 +182,7 @@ export default function Dashboard() {
           lg:translate-x-0 transition-transform duration-300 ease-in-out
           w-64 bg-gray-800/90 backdrop-blur-lg border-r border-gray-700
           lg:bg-gray-800/50 lg:backdrop-blur-sm
+          flex-shrink-0
         `}>
           <div className="flex flex-col h-full">
             {/* Logo */}
@@ -267,9 +277,9 @@ export default function Dashboard() {
         )}
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col min-h-screen">
-          {/* Top Bar */}
-          <header className="hidden lg:flex items-center justify-between p-6 border-b border-gray-800">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          {/* Top Bar - Fixed */}
+          <header className="flex-shrink-0 hidden lg:flex items-center justify-between p-6 border-b border-gray-800">
             <div>
               <h1 className="text-2xl font-bold text-white">
                 {activeTab === "chat" && "AI Chat Assistant"}
@@ -298,10 +308,10 @@ export default function Dashboard() {
           </header>
 
           {/* Content Area - Fixed height container */}
-          <main className="flex-1 overflow-hidden">
-            <div className="h-full p-4 lg:p-6">
+          <main className="flex-1 overflow-hidden flex flex-col">
+            <div className="flex-1 overflow-hidden p-4 lg:p-6">
               {activeTab === "chat" && (
-                <div className="h-full">
+                <div className="h-full flex flex-col">
                   <ChatBox 
                     selectedDocumentId={selectedDocumentId}
                     chatHistory={chatHistory}

@@ -35,11 +35,14 @@ const uploadFile = async () => {
       throw new Error("Invalid response format from server");
     }
   } catch (err) {
-    console.error("UPLOAD ERROR:", err);
-    alert(
-      err.response?.data?.message ||
-      "Failed to upload document. Please try again."
-    );
+    // Don't log 401 errors - they're handled by axios interceptor
+    if (err.response?.status !== 401) {
+      console.error("UPLOAD ERROR:", err);
+      alert(
+        err.response?.data?.message ||
+        "Failed to upload document. Please try again."
+      );
+    }
   } finally {
     setLoading(false);
   }

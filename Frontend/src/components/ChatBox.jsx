@@ -1,13 +1,16 @@
 // ChatBox.jsx - Updated with persistent chat
 import React from "react";
-import { useState, useEffect } from "react";
-import { Send, Bot, User, Sparkles, Copy, CheckCircle, RefreshCw } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Send, Bot, User, Sparkles, Copy, CheckCircle, RefreshCw, ChevronDown } from "lucide-react";
 import api from "../api/axios";
 
 export default function ChatBox({ selectedDocumentId, chatHistory = [], setChatHistory }) {
   const [messages, setMessages] = useState([]);
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
+  const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+  const [showScrollButton, setShowScrollButton] = useState(false);
 
   // Load messages for selected document when it changes
  useEffect(() => {
@@ -28,6 +31,30 @@ useEffect(() => {
     localStorage.setItem(`chat_${selectedDocumentId}`, JSON.stringify(messages));
   }
 }, [messages, selectedDocumentId]);
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, loading]);
+
+  // Check if user has scrolled up
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+      setShowScrollButton(!isNearBottom);
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   const askQuestion = async () => {
     if (!question.trim()) return;
@@ -71,23 +98,26 @@ useEffect(() => {
       }));
 
     } catch (error) {
-      console.error("Error asking question:", error);
-      // Add error message
-      const errorMessage = { 
-        type: "bot", 
-        data: { 
-          answer: "Sorry, I couldn't process your request. Please try again.",
-          sources: []
-        }, 
-        timestamp: new Date().toISOString() 
-      };
-      const errorMessages = [...updatedMessages, errorMessage];
-      setMessages(errorMessages);
-      
-      setChatHistory(prev => ({
-        ...prev,
-        [selectedDocumentId]: errorMessages
-      }));
+      // Don't log 401 errors - they're handled by axios interceptor
+      if (error.response?.status !== 401) {
+        console.error("Error asking question:", error);
+        // Add error message
+        const errorMessage = { 
+          type: "bot", 
+          data: { 
+            answer: "Sorry, I couldn't process your request. Please try again.",
+            sources: []
+          }, 
+          timestamp: new Date().toISOString() 
+        };
+        const errorMessages = [...updatedMessages, errorMessage];
+        setMessages(errorMessages);
+        
+        setChatHistory(prev => ({
+          ...prev,
+          [selectedDocumentId]: errorMessages
+        }));
+      }
     } finally {
       setLoading(false);
       setQuestion("");
@@ -118,9 +148,9 @@ useEffect(() => {
   };
 
   return (
-  <div className="flex flex-col h-screen sm:h-full bg-gradient-to-b from-gray-900 to-black sm:rounded-xl overflow-hidden border-0 sm:border border-gray-800">
-  {/* Header */}
-  <div className="bg-gray-800/50 px-4 py-3 sm:px-6 sm:py-4 border-b border-gray-700 flex items-center justify-between">
+  <div className="flex flex-col h-full bg-gradient-to-b from-gray-900 to-black rounded-xl overflow-hidden border border-gray-800">
+  {/* Header - Fixed */}
+  <div className="flex-shrink-0 bg-gray-800/50 px-4 py-3 sm:px-6 sm:py-4 border-b border-gray-700 flex items-center justify-between">
     <div className="flex items-center gap-3">
       <div className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600">
         <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -141,8 +171,11 @@ useEffect(() => {
     )}
   </div>
 
-  {/* Messages Container */}
-  <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gradient-to-b from-gray-900 to-gray-950">
+  {/* Messages Container - Scrollable */}
+  <div 
+    ref={messagesContainerRef}
+    className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gradient-to-b from-gray-900 to-gray-950 min-h-0 scroll-smooth relative"
+  >
     {messages.length === 0 ? (
       <div className="h-full flex flex-col items-center justify-center text-center p-4 sm:p-8">
         <div className="w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-full bg-gradient-to-r from-gray-800 to-gray-900 border border-gray-700 mb-4 sm:mb-6">
@@ -281,10 +314,23 @@ useEffect(() => {
         )}
       </div>
     )}
+    {/* Scroll anchor */}
+    <div ref={messagesEndRef} />
+    
+    {/* Scroll to bottom button */}
+    {showScrollButton && (
+      <button
+        onClick={scrollToBottom}
+        className="absolute bottom-4 right-4 p-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all z-10"
+        aria-label="Scroll to bottom"
+      >
+        <ChevronDown className="w-5 h-5" />
+      </button>
+    )}
   </div>
 
-  {/* Input Area */}
-  <div className="p-3 sm:p-4 border-t border-gray-800 bg-gray-900/30">
+  {/* Input Area - Fixed */}
+  <div className="flex-shrink-0 p-3 sm:p-4 border-t border-gray-800 bg-gray-900/30">
     <div className="flex gap-2 sm:gap-3">
       <div className="flex-1 relative">
         <textarea
