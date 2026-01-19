@@ -28,12 +28,36 @@ export default function Login() {
       const res = await api.post("/auth/login", {
         email,
         password,
+      }, {
+        timeout: 30000, // 30 second timeout
       });
 
-      login(res.data.token);
-      navigate("/");
+      if (res.data && res.data.token) {
+        login(res.data.token);
+        navigate("/");
+      } else {
+        throw new Error("Invalid response from server");
+      }
     } catch (err) {
-      setError(err.response?.data?.message || "Invalid credentials");
+      console.error("Login error:", err);
+      
+      let errorMessage = "Invalid credentials";
+      
+      if (err.code === "ECONNABORTED" || err.message?.includes("timeout")) {
+        errorMessage = "Request timeout. The server is taking too long to respond. Please try again.";
+      } else if (err.code === "ERR_NETWORK" || err.message?.includes("Network Error") || !err.response) {
+        errorMessage = "Cannot connect to server. Please check your internet connection and try again.";
+      } else if (err.response?.status === 400 || err.response?.status === 401) {
+        errorMessage = err.response?.data?.message || "Invalid email or password";
+      } else if (err.response?.status >= 500) {
+        errorMessage = "Server error. Please try again later.";
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

@@ -40,16 +40,40 @@ export default function Register() {
     setError("");
 
     try {
-      await api.post("/auth/register", {
+      const res = await api.post("/auth/register", {
         name,
         email,
         password,
+      }, {
+        timeout: 30000, // 30 second timeout
       });
 
-      alert("Registration successful! Please login.");
-      navigate("/login");
+      if (res.data) {
+        alert("Registration successful! Please login.");
+        navigate("/login");
+      } else {
+        throw new Error("Invalid response from server");
+      }
     } catch (err) {
-      setError(err.response?.data?.message || "Registration failed");
+      console.error("Registration error:", err);
+      
+      let errorMessage = "Registration failed";
+      
+      if (err.code === "ECONNABORTED" || err.message?.includes("timeout")) {
+        errorMessage = "Request timeout. The server is taking too long to respond. Please try again.";
+      } else if (err.code === "ERR_NETWORK" || err.message?.includes("Network Error") || !err.response) {
+        errorMessage = "Cannot connect to server. Please check your internet connection and try again.";
+      } else if (err.response?.status === 400) {
+        errorMessage = err.response?.data?.message || "Invalid registration data. Please check your information.";
+      } else if (err.response?.status >= 500) {
+        errorMessage = "Server error. Please try again later.";
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

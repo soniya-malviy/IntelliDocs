@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import FileUpload from "../components/FileUpload";
 import ChatBox from "../components/ChatBox";
-import { LogOut, Menu, X, Home, FileText, Settings, User, Bell, HelpCircle, Upload, Trash2, Eye } from "lucide-react";
+import { LogOut, Menu, X, Home, FileText, User, Upload, Trash2 } from "lucide-react";
 import api from "../api/axios";
 import { use } from "react";
 
@@ -30,6 +30,12 @@ export default function Dashboard() {
 
 
   useEffect(() => {
+    // Only fetch user if we have a token
+    const token = localStorage.getItem("token");
+    if (!token) {
+      return;
+    }
+
     const fetchUser = async () => {
       try {
         const res = await api.get("/auth/me");
@@ -47,6 +53,12 @@ export default function Dashboard() {
 
   // Fetch documents from backend on component mount
   useEffect(() => {
+    // Only fetch documents if we have a token
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setLoading(false);
+      return;
+    }
     fetchDocuments();
   }, []);
 
@@ -56,6 +68,12 @@ export default function Dashboard() {
   }, [chatHistory]);
 
   useEffect(() => {
+  // Only load documents if we have a token
+  const token = localStorage.getItem("token");
+  if (!token) {
+    return;
+  }
+
   const loadDocuments = async () => {
     try {
       const response = await api.get('/documents');
@@ -81,6 +99,13 @@ export default function Dashboard() {
   loadDocuments();
 }, []);
   const fetchDocuments = async () => {
+    // Only fetch if we have a token
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       const response = await api.get("/documents");
@@ -295,15 +320,6 @@ export default function Dashboard() {
                 {activeTab === "documents" && "Manage and view your uploaded files"}
                 {activeTab === "upload" && "Upload new PDF documents for analysis"}
               </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <button className="p-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-xl transition-colors relative">
-                <Bell className="w-6 h-6" />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
-              </button>
-              <button className="p-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-xl transition-colors">
-                <HelpCircle className="w-6 h-6" />
-              </button>
             </div>
           </header>
 

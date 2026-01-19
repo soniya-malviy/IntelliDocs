@@ -12,6 +12,13 @@ export default function FileUpload({ onUploadSuccess }) {
 const uploadFile = async () => {
   if (!file) return;
 
+  // Check if user is authenticated
+  const token = localStorage.getItem("token");
+  if (!token) {
+    alert("Please login to upload documents");
+    return;
+  }
+
   const formData = new FormData();
   formData.append("file", file);
 
@@ -23,14 +30,21 @@ const uploadFile = async () => {
       headers: {
         "Content-Type": "multipart/form-data",
       },
+      timeout: 60000, // 60 second timeout for upload
     });
     
     if (res.data && res.data.document && res.data.document._id) {
+      // File uploaded successfully, processing happens in background
       onUploadSuccess(res.data.document._id);
       setFile(null);
       document.querySelector('input[type="file"]').value = "";
+      
       // Show success message
-      alert("Document uploaded successfully!");
+      if (res.data.document.status === "processing") {
+        alert("Document uploaded successfully! Processing in background. You can check the status in the Documents tab.");
+      } else {
+        alert("Document uploaded successfully!");
+      }
     } else {
       throw new Error("Invalid response format from server");
     }
@@ -38,10 +52,18 @@ const uploadFile = async () => {
     // Don't log 401 errors - they're handled by axios interceptor
     if (err.response?.status !== 401) {
       console.error("UPLOAD ERROR:", err);
-      alert(
-        err.response?.data?.message ||
-        "Failed to upload document. Please try again."
-      );
+      
+      let errorMessage = "Failed to upload document. Please try again.";
+      
+      if (err.code === "ECONNABORTED" || err.message.includes("timeout")) {
+        errorMessage = "Upload timeout. The file might be too large or the server is taking too long. Please try again.";
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      alert(errorMessage);
     }
   } finally {
     setLoading(false);
