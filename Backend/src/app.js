@@ -27,82 +27,56 @@ console.log("✅ CORS Configuration:", {
   allowedOrigins: allowedOrigins.length > 0 ? allowedOrigins : "ALL (production mode)",
 });
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, Postman, curl)
-      if (!origin) {
-        return callback(null, true);
-      }
-
-      // In production, allow all origins if CORS_ORIGINS is not configured
-      if (isProduction && allowedOrigins.length === 0) {
-        return callback(null, true);
-      }
-
-      // If CORS_ORIGINS is configured, check against the list
-      if (allowedOrigins.length > 0) {
-        if (allowedOrigins.includes(origin)) {
-          return callback(null, true);
-        }
-        // Log blocked origin for debugging
-        console.warn(`⚠️ CORS blocked origin: ${origin}`);
-        return callback(new Error(`CORS blocked for origin: ${origin}`));
-      }
-
-      // Default: allow all in production, restrict in development
-      if (isProduction) {
-        return callback(null, true);
-      }
-
-      // Development: allow localhost origins
-      if (origin.includes("localhost") || origin.includes("127.0.0.1")) {
-        return callback(null, true);
-      }
-
-      return callback(null, true); // Allow by default
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "X-Requested-With",
-      "Accept",
-      "Origin",
-      "Access-Control-Request-Method",
-      "Access-Control-Request-Headers",
-    ],
-    exposedHeaders: ["Content-Length", "Content-Type"],
-    maxAge: 86400, // 24 hours
-    preflightContinue: false,
-    optionsSuccessStatus: 204,
-  })
-);
-
-// Handle preflight requests explicitly (Express 5 compatible)
-// Use middleware approach instead of route handler
+// Custom CORS middleware that always sets headers
 app.use((req, res, next) => {
-  if (req.method === "OPTIONS") {
-    const origin = req.headers.origin;
-    
-    // Use the same origin logic as CORS middleware
+  const origin = req.headers.origin;
+  
+  // Determine allowed origin
+  // Note: When credentials: true, we CANNOT use "*" - must use specific origin
+  let allowedOrigin = null;
+  
+  if (origin) {
+    // In production, allow all origins if CORS_ORIGINS is not configured
     if (isProduction && allowedOrigins.length === 0) {
-      res.header("Access-Control-Allow-Origin", origin || "*");
-    } else if (allowedOrigins.length > 0 && origin && allowedOrigins.includes(origin)) {
-      res.header("Access-Control-Allow-Origin", origin);
-    } else if (isProduction) {
-      res.header("Access-Control-Allow-Origin", origin || "*");
-    } else {
-      res.header("Access-Control-Allow-Origin", origin || "*");
+      allowedOrigin = origin; // Always use the request origin
+    } 
+    // If CORS_ORIGINS is configured, check against the list
+    else if (allowedOrigins.length > 0) {
+      if (allowedOrigins.includes(origin)) {
+        allowedOrigin = origin;
+      } else {
+        console.warn(`⚠️ CORS blocked origin: ${origin}`);
+        // In production, still allow but log warning
+        if (isProduction) {
+          allowedOrigin = origin;
+        }
+      }
+    } 
+    // Default: allow all in production
+    else if (isProduction) {
+      allowedOrigin = origin;
     }
-    
-    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
-    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin");
-    res.header("Access-Control-Allow-Credentials", "true");
-    res.header("Access-Control-Max-Age", "86400");
+    // Development: allow all origins
+    else {
+      allowedOrigin = origin;
+    }
+  }
+  
+  // Always set CORS headers for all requests (including no-origin requests)
+  if (allowedOrigin) {
+    res.header("Access-Control-Allow-Origin", allowedOrigin);
+  }
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers");
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.header("Access-Control-Expose-Headers", "Content-Length, Content-Type");
+  res.header("Access-Control-Max-Age", "86400");
+  
+  // Handle preflight OPTIONS requests
+  if (req.method === "OPTIONS") {
     return res.sendStatus(204);
   }
+  
   next();
 });
 
