@@ -4,7 +4,6 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
-import {glob} from "glob";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -141,8 +140,6 @@ export const getDocuments = async (req, res) => {
 
 
 export const deleteDocument = async (req, res) => {
-
-    
   try {
     const { id } = req.params;
     
@@ -157,28 +154,106 @@ export const deleteDocument = async (req, res) => {
       return res.status(403).json({ message: "Not authorized" });
     }
 
+    // Store file path and document ID before deleting from database
+    const filePath = document.filePath;
+    const docId = document._id.toString(); // Convert ObjectId to string for file matching
+    const deletionErrors = [];
+
     // Delete the document from database
     await Document.findByIdAndDelete(id);
 
-    // TODO: Delete the associated vector store files
-    const vectorStorePath = path.join(
-      __dirname,
-      "../../ai-agent/vector_store",
-      `faiss_index_${id}*`  // This will match both the index and metadata files
-    );
-
-    // Delete vector store files if they exist
+    // 1. Delete the actual PDF file from filesystem
     try {
-      const files = glob.sync(vectorStorePath);
-      for (const file of files) {
-        fs.unlinkSync(file);
+      // Resolve uploads directory (same logic as upload)
+      const uploadsDir =
+        process.env.NODE_ENV === "production"
+          ? "/tmp/uploads"
+          : path.join(process.cwd(), "uploads");
+
+      let fullFilePath;
+      
+      // filePath is stored as relative path from process.cwd()
+      // Try multiple possible locations
+      const possiblePaths = [
+        path.join(process.cwd(), filePath),           // Relative to cwd
+        path.resolve(filePath),                       // Absolute path
+        path.join(uploadsDir, path.basename(filePath)), // Just filename in uploads
+        filePath                                      // As-is
+      ];
+
+      // Find the first existing file
+      fullFilePath = possiblePaths.find(p => fs.existsSync(p));
+
+      if (fullFilePath && fs.existsSync(fullFilePath)) {
+        fs.unlinkSync(fullFilePath);
+        console.log(`✅ Deleted PDF file: ${fullFilePath}`);
+      } else {
+        console.warn(`⚠️ PDF file not found. Tried: ${possiblePaths.join(", ")}`);
       }
     } catch (error) {
-      console.error("Error deleting vector store files:", error);
+      console.error("Error deleting PDF file:", error);
+      deletionErrors.push(`PDF file: ${error.message}`);
       // Continue even if file deletion fails
     }
 
-    res.json({ message: "Document deleted successfully" });
+    // 2. Delete the associated vector store files
+    try {
+      const vectorStoreDir = path.join(aiAgentDir, "vector_store");
+      
+      // Check if vector store directory exists
+      if (!fs.existsSync(vectorStoreDir)) {
+        console.log(`ℹ️ Vector store directory not found: ${vectorStoreDir}`);
+      } else {
+        // Pattern to match both index and metadata files
+        // Use docId (converted to string) to match the file naming convention
+        const indexPattern = `faiss_index_${docId}`;
+        const metaPattern = `faiss_index_${docId}_meta.pkl`;
+        
+        // Get all files in vector_store directory
+        const allFiles = fs.readdirSync(vectorStoreDir);
+        
+        // Find and delete matching files (index file and metadata file)
+        const filesToDelete = allFiles.filter(file => 
+          file === indexPattern || file === metaPattern || file.startsWith(indexPattern)
+        );
+
+        let deletedCount = 0;
+        for (const file of filesToDelete) {
+          const filePath = path.join(vectorStoreDir, file);
+          try {
+            if (fs.existsSync(filePath)) {
+              fs.unlinkSync(filePath);
+              console.log(`✅ Deleted vector store file: ${file}`);
+              deletedCount++;
+            }
+          } catch (fileError) {
+            console.error(`Error deleting vector store file ${file}:`, fileError);
+            deletionErrors.push(`Vector store file ${file}: ${fileError.message}`);
+          }
+        }
+
+        if (deletedCount === 0) {
+          console.log(`ℹ️ No vector store files found for document ${docId}`);
+        } else {
+          console.log(`✅ Deleted ${deletedCount} vector store file(s) for document ${docId}`);
+        }
+      }
+    } catch (error) {
+      console.error("Error deleting vector store files:", error);
+      deletionErrors.push(`Vector store: ${error.message}`);
+      // Continue even if file deletion fails
+    }
+
+    // Return success response (even if some file deletions failed)
+    if (deletionErrors.length > 0) {
+      console.warn("Some files could not be deleted:", deletionErrors);
+      return res.json({ 
+        message: "Document deleted successfully, but some files could not be removed",
+        warnings: deletionErrors
+      });
+    }
+
+    res.json({ message: "Document and all associated files deleted successfully" });
   } catch (error) {
     console.error("Delete document error:", error);
     res.status(500).json({ 
