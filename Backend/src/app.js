@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import path from "path";
 import dotenv from "dotenv";
+import mongoose from "mongoose";
+import connectDB from "./config/db.js";
 
 import authRoutes from "./routes/authRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
@@ -45,6 +47,17 @@ app.use(
 /* ---------------- MIDDLEWARE ---------------- */
 app.use(express.json());
 
+// Database connection check middleware
+app.use((req, res, next) => {
+  if (mongoose.connection.readyState !== 1) {
+    // Try to reconnect if disconnected
+    if (mongoose.connection.readyState === 0) {
+      connectDB().catch(console.error);
+    }
+  }
+  next();
+});
+
 /* ---------------- ROUTES ---------------- */
 app.use("/api/auth", authRoutes);
 app.use("/api/documents", documentRoutes);
@@ -56,6 +69,7 @@ app.get("/api/health", (req, res) => {
     status: "Server running 🚀",
     env: process.env.NODE_ENV,
     time: new Date().toISOString(),
+    db: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
   });
 });
 

@@ -29,7 +29,7 @@ export default function Login() {
         email,
         password,
       }, {
-        timeout: 30000, // 30 second timeout
+        timeout: 45000, // 45 second timeout (increased for slow connections)
       });
 
       if (res.data && res.data.token) {
