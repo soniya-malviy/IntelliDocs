@@ -4,6 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { LogIn, Mail, Lock, Sparkles, Eye, EyeOff } from "lucide-react";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -13,6 +14,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { success, error: showErrorToast } = useToast();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -34,6 +36,7 @@ export default function Login() {
 
       if (res.data && res.data.token) {
         login(res.data.token);
+        success("Login successful! Welcome back.");
         navigate("/");
       } else {
         throw new Error("Invalid response from server");
@@ -58,6 +61,7 @@ export default function Login() {
       }
       
       setError(errorMessage);
+      showErrorToast(errorMessage);
     } finally {
       setLoading(false);
     }

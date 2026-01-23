@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import './index.css';
 import App from './App.jsx';
+import { ToastProvider } from './context/ToastContext.jsx';
 
 // Suppress 401 errors in console for production
 if (import.meta.env.PROD) {
@@ -24,7 +25,9 @@ if (import.meta.env.PROD) {
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
-      <App />
+      <ToastProvider>
+        <App />
+      </ToastProvider>
     </BrowserRouter>
   </React.StrictMode>
 );

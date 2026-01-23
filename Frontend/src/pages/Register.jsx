@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { UserPlus, User, Mail, Lock, Check, Eye, EyeOff } from "lucide-react";
 import api from "../api/axios";
+import { useToast } from "../context/ToastContext";
 
 export default function Register() {
   const [name, setName] = useState("");
@@ -14,6 +15,7 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { success, error: showErrorToast } = useToast();
 
   const passwordStrength = {
     length: password.length >= 8,
@@ -49,8 +51,10 @@ export default function Register() {
       });
 
       if (res.data) {
-        alert("Registration successful! Please login.");
-        navigate("/login");
+        success("Registration successful! Redirecting to login...");
+        setTimeout(() => {
+          navigate("/login");
+        }, 1500);
       } else {
         throw new Error("Invalid response from server");
       }
@@ -74,6 +78,7 @@ export default function Register() {
       }
       
       setError(errorMessage);
+      showErrorToast(errorMessage);
     } finally {
       setLoading(false);
     }

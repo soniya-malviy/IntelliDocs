@@ -3,10 +3,12 @@ import React from "react";
 import { useState } from "react";
 import { Upload, Loader2, FileText } from "lucide-react";
 import api from "../api/axios";
+import { useToast } from "../context/ToastContext";
 
 export default function FileUpload({ onUploadSuccess }) {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const { success, error } = useToast();
 
   // In FileUpload.jsx
 const uploadFile = async () => {
@@ -15,7 +17,7 @@ const uploadFile = async () => {
   // Check if user is authenticated
   const token = localStorage.getItem("token");
   if (!token) {
-    alert("Please login to upload documents");
+    error("Please login to upload documents");
     return;
   }
 
@@ -41,9 +43,11 @@ const uploadFile = async () => {
       
       // Show success message
       if (res.data.document.status === "processing") {
-        alert("Document uploaded successfully! Processing in background. You can check the status in the Documents tab.");
+        success("Document uploaded successfully! Processing in background. You can check the status in the Documents tab.", {
+          duration: 6000
+        });
       } else {
-        alert("Document uploaded successfully!");
+        success("Document uploaded successfully!");
       }
     } else {
       throw new Error("Invalid response format from server");
@@ -63,7 +67,7 @@ const uploadFile = async () => {
         errorMessage = err.message;
       }
       
-      alert(errorMessage);
+      error(errorMessage);
     }
   } finally {
     setLoading(false);

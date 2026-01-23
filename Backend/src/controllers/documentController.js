@@ -106,6 +106,14 @@ export const uploadDocument = async (req, res) => {
       });
     }
 
+    // Check if user is authenticated
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        message: "Authentication required",
+        error: "User not authenticated",
+      });
+    }
+
     // Create document in DB with "processing" status
     const document = await Document.create({
       userId: req.user._id,
@@ -207,6 +215,14 @@ export const uploadDocument = async (req, res) => {
 
 export const getDocuments = async (req, res) => {
   try {
+    // Check if user is authenticated
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        message: "Authentication required",
+        error: "User not authenticated",
+      });
+    }
+
     const documents = await Document.find({ userId: req.user._id })
       .sort({ createdAt: -1 });
     res.json(documents);

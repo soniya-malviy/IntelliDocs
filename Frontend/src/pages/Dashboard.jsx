@@ -1,6 +1,7 @@
 // Dashboard.jsx - Updated with persistent data
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 import FileUpload from "../components/FileUpload";
 import ChatBox from "../components/ChatBox";
 import { LogOut, Menu, X, Home, FileText, User, Upload, Trash2 } from "lucide-react";
@@ -9,6 +10,7 @@ import { use } from "react";
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
+  const { success, error } = useToast();
   const [nameuser, setUser] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState("chat");
@@ -146,6 +148,10 @@ export default function Dashboard() {
   }
 
   try {
+    // Get document name before deletion for toast message
+    const docToDelete = documents.find(doc => doc._id === documentId);
+    const docName = docToDelete?.filename || "Document";
+    
     await api.delete(`/documents/${documentId}`);
     
     // Update UI
@@ -165,9 +171,12 @@ export default function Dashboard() {
       return newHistory;
     });
 
-  } catch (error) {
-    console.error("Error deleting document:", error);
-    alert(error.response?.data?.message || "Failed to delete document");
+    // Show success toast
+    success(`${docName} deleted successfully!`);
+
+  } catch (err) {
+    console.error("Error deleting document:", err);
+    error(err.response?.data?.message || "Failed to delete document");
   }
 };
 
