@@ -70,36 +70,36 @@ export default function Dashboard() {
   }, [chatHistory]);
 
   useEffect(() => {
-  // Only load documents if we have a token
-  const token = localStorage.getItem("token");
-  if (!token) {
-    return;
-  }
-
-  const loadDocuments = async () => {
-    try {
-      const response = await api.get('/documents');
-      setDocuments(response.data);
-      
-      // If there's a document ID in the URL, use it
-      const urlParams = new URLSearchParams(window.location.search);
-      const docId = urlParams.get('docId');
-      
-      if (docId && response.data.some(doc => doc._id === docId)) {
-        setSelectedDocumentId(docId);
-      } else if (response.data.length > 0) {
-        setSelectedDocumentId(response.data[0]._id);
-      }
-    } catch (error) {
-      // Don't log 401 errors - they're handled by axios interceptor
-      if (error.response?.status !== 401) {
-        console.error('Error loading documents:', error);
-      }
+    // Only load documents if we have a token
+    const token = localStorage.getItem("token");
+    if (!token) {
+      return;
     }
-  };
 
-  loadDocuments();
-}, []);
+    const loadDocuments = async () => {
+      try {
+        const response = await api.get('/documents');
+        setDocuments(response.data);
+
+        // If there's a document ID in the URL, use it
+        const urlParams = new URLSearchParams(window.location.search);
+        const docId = urlParams.get('docId');
+
+        if (docId && response.data.some(doc => doc._id === docId)) {
+          setSelectedDocumentId(docId);
+        } else if (response.data.length > 0) {
+          setSelectedDocumentId(response.data[0]._id);
+        }
+      } catch (error) {
+        // Don't log 401 errors - they're handled by axios interceptor
+        if (error.response?.status !== 401) {
+          console.error('Error loading documents:', error);
+        }
+      }
+    };
+
+    loadDocuments();
+  }, []);
   const fetchDocuments = async () => {
     // Only fetch if we have a token
     const token = localStorage.getItem("token");
@@ -112,7 +112,7 @@ export default function Dashboard() {
       setLoading(true);
       const response = await api.get("/documents");
       setDocuments(response.data);
-      
+
       // Select the first document by default if none is selected
       if (response.data.length > 0 && !selectedDocumentId) {
         setSelectedDocumentId(response.data[0]._id);
@@ -128,61 +128,61 @@ export default function Dashboard() {
   };
 
   const handleUploadSuccess = (documentId) => {
-  // Update URL with the new document ID
-  const url = new URL(window.location);
-  url.searchParams.set('docId', documentId);
-  window.history.pushState({}, '', url);
-  
-  // Refresh documents and select the new one
-  fetchDocuments().then(() => {
-    setSelectedDocumentId(documentId);
-    setActiveTab("chat");
-  });
-};
+    // Update URL with the new document ID
+    const url = new URL(window.location);
+    url.searchParams.set('docId', documentId);
+    window.history.pushState({}, '', url);
 
- const handleDeleteDocument = async (documentId, e) => {
-  e.stopPropagation(); // Prevent event bubbling
-  
-  if (!window.confirm("Are you sure you want to delete this document?")) {
-    return;
-  }
-
-  try {
-    // Get document name before deletion for toast message
-    const docToDelete = documents.find(doc => doc._id === documentId);
-    const docName = docToDelete?.filename || "Document";
-    
-    await api.delete(`/documents/${documentId}`);
-    
-    // Update UI
-    setDocuments(prev => {
-      const newDocs = prev.filter(doc => doc._id !== documentId);
-      // If the deleted document was selected, select another one
-      if (selectedDocumentId === documentId) {
-        setSelectedDocumentId(newDocs.length > 0 ? newDocs[0]._id : null);
-      }
-      return newDocs;
+    // Refresh documents and select the new one
+    fetchDocuments().then(() => {
+      setSelectedDocumentId(documentId);
+      setActiveTab("chat");
     });
-    
-    // Clear chat history for this document
-    setChatHistory(prev => {
-      const newHistory = { ...prev };
-      delete newHistory[documentId];
-      return newHistory;
-    });
+  };
 
-    // Show success toast
-    success(`${docName} deleted successfully!`);
+  const handleDeleteDocument = async (documentId, e) => {
+    e.stopPropagation(); // Prevent event bubbling
 
-  } catch (err) {
-    console.error("Error deleting document:", err);
-    error(err.response?.data?.message || "Failed to delete document");
-  }
-};
+    if (!window.confirm("Are you sure you want to delete this document?")) {
+      return;
+    }
+
+    try {
+      // Get document name before deletion for toast message
+      const docToDelete = documents.find(doc => doc._id === documentId);
+      const docName = docToDelete?.filename || "Document";
+
+      await api.delete(`/documents/${documentId}`);
+
+      // Update UI
+      setDocuments(prev => {
+        const newDocs = prev.filter(doc => doc._id !== documentId);
+        // If the deleted document was selected, select another one
+        if (selectedDocumentId === documentId) {
+          setSelectedDocumentId(newDocs.length > 0 ? newDocs[0]._id : null);
+        }
+        return newDocs;
+      });
+
+      // Clear chat history for this document
+      setChatHistory(prev => {
+        const newHistory = { ...prev };
+        delete newHistory[documentId];
+        return newHistory;
+      });
+
+      // Show success toast
+      success(`${docName} deleted successfully!`);
+
+    } catch (err) {
+      console.error("Error deleting document:", err);
+      error(err.response?.data?.message || "Failed to delete document");
+    }
+  };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   const formatFileSize = (bytes) => {
@@ -194,7 +194,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-gray-950 to-black text-gray-200 overflow-hidden">
+    <div className="h-screen flex flex-col bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-900 via-[#0f172a] to-black text-gray-200 overflow-hidden">
       {/* Mobile Header */}
       <div className="lg:hidden bg-gray-800 border-b border-gray-700 p-4">
         <div className="flex items-center justify-between">
@@ -204,7 +204,7 @@ export default function Dashboard() {
           >
             {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
-         
+
         </div>
       </div>
 
@@ -214,8 +214,7 @@ export default function Dashboard() {
           fixed lg:static inset-y-0 left-0 z-50
           transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
           lg:translate-x-0 transition-transform duration-300 ease-in-out
-          w-64 bg-gray-800/90 backdrop-blur-lg border-r border-gray-700
-          lg:bg-gray-800/50 lg:backdrop-blur-sm
+          w-72 glass border-r border-gray-700/50
           flex-shrink-0
         `}>
           <div className="flex flex-col h-full">
@@ -232,7 +231,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-          
+
 
             {/* Navigation */}
             <nav className="flex-1 p-4">
@@ -276,7 +275,7 @@ export default function Dashboard() {
               </div>
             )}
 
-              {/* User Profile */}
+            {/* User Profile */}
             <div className="p-6 border-b border-gray-700">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 flex items-center justify-center">
@@ -321,11 +320,11 @@ export default function Dashboard() {
                 {activeTab === "upload" && "Upload Documents"}
               </h1>
               <p className="text-gray-400">
-                {activeTab === "chat" && selectedDocumentId 
+                {activeTab === "chat" && selectedDocumentId
                   ? `Chatting with: ${documents.find(d => d._id === selectedDocumentId)?.filename || "Document"}`
-                  : activeTab === "chat" 
-                  ? "Select a document to start chatting" 
-                  : ""}
+                  : activeTab === "chat"
+                    ? "Select a document to start chatting"
+                    : ""}
                 {activeTab === "documents" && "Manage and view your uploaded files"}
                 {activeTab === "upload" && "Upload new PDF documents for analysis"}
               </p>
@@ -337,7 +336,7 @@ export default function Dashboard() {
             <div className="flex-1 overflow-hidden p-4 lg:p-6">
               {activeTab === "chat" && (
                 <div className="h-full flex flex-col">
-                  <ChatBox 
+                  <ChatBox
                     selectedDocumentId={selectedDocumentId}
                     chatHistory={chatHistory}
                     setChatHistory={setChatHistory}
@@ -362,7 +361,7 @@ export default function Dashboard() {
                           <h2 className="text-xl font-semibold text-white">My Documents</h2>
                           <p className="text-gray-400">All uploaded PDF files</p>
                         </div>
-                        <button 
+                        <button
                           onClick={() => setActiveTab("upload")}
                           className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all"
                         >
@@ -380,7 +379,7 @@ export default function Dashboard() {
                           <FileText className="w-16 h-16 text-gray-600 mx-auto mb-4" />
                           <h3 className="text-lg font-medium text-gray-400 mb-2">No documents yet</h3>
                           <p className="text-gray-500 mb-6">Upload your first PDF to get started</p>
-                          <button 
+                          <button
                             onClick={() => setActiveTab("upload")}
                             className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all"
                           >
@@ -390,9 +389,12 @@ export default function Dashboard() {
                       ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                           {documents.map((doc) => (
-                            <div 
-                              key={doc._id} 
-                              className={`p-4 rounded-xl border ${selectedDocumentId === doc._id ? 'border-blue-500 bg-blue-900/10' : 'border-gray-700 bg-gray-900/50'} hover:border-blue-400 transition-colors`}
+                            <div
+                              key={doc._id}
+                              className={`p-5 rounded-2xl border transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl ${selectedDocumentId === doc._id
+                                  ? 'glass border-blue-500/50 bg-blue-900/10 shadow-[0_0_20px_rgba(59,130,246,0.15)]'
+                                  : 'glass-card border-gray-800/50 hover:border-gray-700'
+                                }`}
                             >
                               <div className="flex items-start justify-between mb-3">
                                 <div className="flex items-center gap-3">
@@ -409,11 +411,11 @@ export default function Dashboard() {
                                   <Trash2 className="w-4 h-4" />
                                 </button>
                               </div>
-                              
+
                               <p className="text-xs text-gray-500 mb-3">
                                 Uploaded: {formatDate(doc.uploadDate)}
                               </p>
-                              
+
                               <div className="flex gap-2">
                                 <button
                                   onClick={() => {

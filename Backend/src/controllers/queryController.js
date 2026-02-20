@@ -35,7 +35,7 @@ export const queryDocument = async (req, res) => {
         message: "Question and document ID are required"
       });
     }
-    
+
 
     const pythonExecutable = path.join(
       projectRoot,
@@ -46,6 +46,17 @@ export const queryDocument = async (req, res) => {
       projectRoot,
       "ai-agent/query_rag.py"
     );
+
+    // Check if Python executable exists
+    try {
+      await import('fs/promises').then(fs => fs.access(pythonExecutable));
+    } catch (e) {
+      console.error(`Python executable not found at: ${pythonExecutable}`);
+      return res.status(500).json({
+        message: "Server configuration error",
+        error: "Python environment is not set up correctly. Please contact support."
+      });
+    }
 
     console.log('\n========================================');
     console.log('🔍 QUERY REQUEST RECEIVED');
@@ -64,12 +75,28 @@ export const queryDocument = async (req, res) => {
       cwd: projectRoot
     });
 
-    let output = '';
-    let errorOutput = '';
+    let timedOut = false;
+
+    // Set a timeout for the Python process
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      pythonProcess.kill('SIGTERM');
+      console.error('🕰 Python process timed out after 60 seconds');
+      
+      // CRITICAL: Always set CORS headers before sending any response
+      setCorsHeaders(req, res);
+      return res.status(504).json({
+        message: "Request timeout. The server is taking too long to process your question. Please try again with a simpler question or smaller document.",
+        error: "Python process timeout"
+      });
+    }, 60000); // 60 second timeout
 
     pythonProcess.stdout.on('data', (data) => {
       output += data.toString();
     });
+
+    let output = ""
+let errorOutput = ""
 
     pythonProcess.stderr.on('data', (data) => {
       errorOutput += data.toString();
@@ -78,9 +105,17 @@ export const queryDocument = async (req, res) => {
     });
 
     pythonProcess.on('close', (code) => {
+      // Clear the timeout if process finished
+      clearTimeout(timeout);
+
       // CRITICAL: Always set CORS headers before sending any response
       // This is needed because the callback runs outside the normal Express middleware chain
       setCorsHeaders(req, res);
+
+      if (timedOut) {
+        // Already handled timeout above
+        return;
+      }
 
       if (code !== 0) {
         console.error('Python script error:', errorOutput);
@@ -92,17 +127,32 @@ export const queryDocument = async (req, res) => {
 
       try {
         const result = JSON.parse(output);
+
+        // Handle explicit errors from Python script
         if (result.status === 'error') {
-          throw new Error(result.error);
+          if (result.error === 'VECTOR_STORE_MISSING') {
+            return res.status(404).json({
+              message: "Document not found or not processed yet. Please upload the document first.",
+              error: "VECTOR_STORE_MISSING"
+            });
+          }
+          
+          return res.status(500).json({
+            message: "Error processing your question",
+            error: result.error
+          });
         }
-        res.json(result);
-      } catch (error) {
-        console.error('Error parsing Python output:', error);
-        // Ensure CORS headers are set even on parsing errors
-        setCorsHeaders(req, res);
-        res.status(500).json({
-          message: "Error processing the response",
-          error: error.message
+
+        // Success response
+        res.status(200).json({
+          message: "Question answered successfully",
+          data: result
+        });
+      } catch (parseError) {
+        console.error('Error parsing Python output:', parseError);
+        return res.status(500).json({
+          message: "Error processing your question",
+          error: "Invalid response from Python script"
         });
       }
     });
@@ -116,6 +166,19 @@ export const queryDocument = async (req, res) => {
         message: "Failed to start Python process",
         error: error.message
       });
+    });
+
+    // Handle Python process exit without proper output
+    pythonProcess.on('exit', (code, signal) => {
+      console.log('Python process exited:', { code, signal });
+      if (code === null && !signal) {
+        console.error('Python process exited without proper code or signal');
+        setCorsHeaders(req, res);
+        res.status(500).json({
+          message: "Python process exited unexpectedly",
+          error: "Process terminated without proper exit code"
+        });
+      }
     });
 
   } catch (error) {
