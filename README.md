@@ -191,12 +191,7 @@ User Question
 ## Example Embedding Code
 
 ```python
-from sentence_transformers import SentenceTransformer
-
-model = SentenceTransformer("all-MiniLM-L6-v2")
-
-def get_embeddings(texts: list):
-    return model.encode(texts, show_progress_bar=True)
+MODEL_NAME = "llama-3.1-8b-instant"
 ```
 
 
