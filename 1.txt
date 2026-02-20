@@ -1,0 +1,67 @@
+* Host intellidocs-3x9l.onrender.com:443 was resolved.
+* IPv6: (none)
+* IPv4: 216.24.57.7, 216.24.57.251
+*   Trying 216.24.57.7:443...
+* Connected to intellidocs-3x9l.onrender.com (216.24.57.7) port 443
+* ALPN: curl offers h2,http/1.1
+* (304) (OUT), TLS handshake, Client hello (1):
+} [334 bytes data]
+*  CAfile: /etc/ssl/cert.pem
+*  CApath: none
+* (304) (IN), TLS handshake, Server hello (2):
+{ [122 bytes data]
+* (304) (IN), TLS handshake, Unknown (8):
+{ [19 bytes data]
+* (304) (IN), TLS handshake, Certificate (11):
+{ [2532 bytes data]
+* (304) (IN), TLS handshake, CERT verify (15):
+{ [78 bytes data]
+* (304) (IN), TLS handshake, Finished (20):
+{ [36 bytes data]
+* (304) (OUT), TLS handshake, Finished (20):
+} [36 bytes data]
+* SSL connection using TLSv1.3 / AEAD-CHACHA20-POLY1305-SHA256 / [blank] / UNDEF
+* ALPN: server accepted h2
+* Server certificate:
+*  subject: CN=onrender.com
+*  start date: Jan 28 21:05:47 2026 GMT
+*  expire date: Apr 28 22:05:44 2026 GMT
+*  subjectAltName: host "intellidocs-3x9l.onrender.com" matched cert's "*.onrender.com"
+*  issuer: C=US; O=Google Trust Services; CN=WE1
+*  SSL certificate verify ok.
+* using HTTP/2
+* [HTTP/2] [1] OPENED stream for https://intellidocs-3x9l.onrender.com/api/documents/query
+* [HTTP/2] [1] [:method: POST]
+* [HTTP/2] [1] [:scheme: https]
+* [HTTP/2] [1] [:authority: intellidocs-3x9l.onrender.com]
+* [HTTP/2] [1] [:path: /api/documents/query]
+* [HTTP/2] [1] [user-agent: curl/8.7.1]
+* [HTTP/2] [1] [accept: */*]
+* [HTTP/2] [1] [authorization: Bearer invalid]
+* [HTTP/2] [1] [content-type: application/json]
+* [HTTP/2] [1] [content-length: 34]
+> POST /api/documents/query HTTP/2
+> Host: intellidocs-3x9l.onrender.com
+> User-Agent: curl/8.7.1
+> Accept: */*
+> Authorization: Bearer invalid
+> Content-Type: application/json
+> Content-Length: 34
+> 
+} [34 bytes data]
+* upload completely sent off: 34 bytes
+< HTTP/2 401 
+< date: Fri, 20 Feb 2026 14:22:49 GMT
+< content-type: application/json; charset=utf-8
+< cf-ray: 9d0ea88738c14832-BOM
+< etag: W/"1b-Vnbj5rKMqngQqPuty0IgBAZBmv4"
+< rndr-id: 476bb47f-9adf-4c89
+< vary: Accept-Encoding
+< x-powered-by: Express
+< x-render-origin-server: Render
+< cf-cache-status: DYNAMIC
+< server: cloudflare
+< alt-svc: h3=":443"; ma=86400
+< 
+{ [27 bytes data]
+* Connection #0 to host intellidocs-3x9l.onrender.com left intact

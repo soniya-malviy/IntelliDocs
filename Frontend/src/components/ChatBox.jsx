@@ -19,8 +19,8 @@ export default function ChatBox({ selectedDocumentId, chatHistory = [], setChatH
     if (selectedDocumentId) {
       const savedMessages = localStorage.getItem(`chat_${selectedDocumentId}`);
       if (savedMessages) {
-        console.log(savedMessages
-        )
+        // console.log(savedMessages
+        // )
         setMessages(JSON.parse(savedMessages));
       } else {
         setMessages([]);
