@@ -9,8 +9,15 @@ from groq import Groq
 
 from embeddings import get_embedding
 
+import sys
+import os
+
+
 # ---------------- LOAD ENV ----------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+sys.path.append(BASE_DIR)
+
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")

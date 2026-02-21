@@ -14,7 +14,7 @@ const __dirname = path.dirname(__filename);
 
 /* ---------- KEEP-ALIVE RELOADER ---------- */
 const url = process.env.RENDER_URL || "http://localhost:5001";
-const interval = 60000; // 30 seconds
+const interval = 30000; // 30 seconds
 
 // Reloader Function
 function reloadWebsite() {

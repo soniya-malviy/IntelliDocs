@@ -7,7 +7,3 @@ def load_pdf_text(file_path: str) -> str:
         text += page.extract_text() or ""
     return text
 
-
-
-# Why custom loader?
-# Gives control instead of hiding logic inside libraries.

@@ -6,9 +6,14 @@ import datetime
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from utils.pdf_loader import load_pdf_text
 from embeddings import get_embeddings
+import sys
+import os
+
+
 
 # ---------------- PATH SETUP ----------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(BASE_DIR)
 VECTOR_DIR = os.path.join(BASE_DIR, "vector_store")
 os.makedirs(VECTOR_DIR, exist_ok=True)
 

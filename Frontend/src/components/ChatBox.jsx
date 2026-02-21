@@ -28,6 +28,9 @@ export default function ChatBox({ selectedDocumentId, chatHistory = [], setChatH
     }
   }, [selectedDocumentId]);
 
+  console.log(messages
+  )
+
   // Save messages to localStorage whenever they change
   useEffect(() => {
     if (selectedDocumentId && messages.length > 0) {
@@ -59,84 +62,57 @@ export default function ChatBox({ selectedDocumentId, chatHistory = [], setChatH
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const askQuestion = async () => {
-    if (!question.trim()) return;
+const askQuestion = async () => {
+  if (!question.trim()) return;
 
-    if (!selectedDocumentId) {
-      alert("Please select a document first");
-      return;
-    }
+  if (!selectedDocumentId) {
+    alert("Please select a document first");
+    return;
+  }
 
-    // Add user message to state
-    const userMessage = { type: "user", text: question, timestamp: new Date().toISOString() };
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
-
-    // Save to chat history
-    setChatHistory(prev => ({
-      ...prev,
-      [selectedDocumentId]: updatedMessages
-    }));
-
-    try {
-      setLoading(true);
-      const res = await api.post("/documents/query", {
-        question,
-        docId: selectedDocumentId,
-      });
-
-      // Add bot response
-      const botMessage = {
-        type: "bot",
-        data: res.data,
-        timestamp: new Date().toISOString()
-      };
-      const finalMessages = [...updatedMessages, botMessage];
-      setMessages(finalMessages);
-
-      // Save to chat history
-      setChatHistory(prev => ({
-        ...prev,
-        [selectedDocumentId]: finalMessages
-      }));
-
-    } catch (error) {
-      // Don't log 401 errors - they're handled by axios interceptor
-      if (error.response?.status !== 401) {
-        console.error("Error asking question:", error);
-
-        // Handle timeout specifically
-        let errorText = "Sorry, I couldn't process your request. Please try again.";
-        if (error.code === "ECONNABORTED" || error.message?.includes("timeout")) {
-          errorText = "Request timeout. The server is taking too long to process your question. Please try again with a simpler question or smaller document.";
-        } else if (error.response?.data?.error) {
-          errorText = error.response.data.error;
-        } else if (error.response?.data?.message) {
-          errorText = error.response.data.message;
-        }
-
-        // Add error message
-        const errorMessage = {
-          type: "bot",
-          data: {
-            answer: errorText,
-            sources: []
-          },
-          timestamp: new Date().toISOString()
-        };
-        const errorMessages = [...updatedMessages, errorMessage];
-        setMessages(errorMessages);
-
-        setChatHistory(prev => ({
-          ...prev,
-          [selectedDocumentId]: errorMessages
-        }));
-      }
-    } finally {
-      setLoading(false);
-      setQuestion("");
-    }
+  const userMessage = {
+    type: "user",
+    text: question,
+    timestamp: new Date().toISOString()
   };
+
+  setMessages(prev => [...prev, userMessage]);
+
+  try {
+    setLoading(true);
+
+    const res = await api.post("/documents/query", {
+      question,
+      docId: selectedDocumentId,
+    });
+
+    const botMessage = {
+      type: "bot",
+      data: res.data.data, // important: use .data.data
+      timestamp: new Date().toISOString()
+    };
+
+    setMessages(prev => [...prev, botMessage]);
+
+  } catch (error) {
+    let errorText = "Sorry, I couldn't process your request.";
+
+    const errorMessage = {
+      type: "bot",
+      data: {
+        answer: errorText,
+        key_points: [],
+        sources: []
+      },
+      timestamp: new Date().toISOString()
+    };
+
+    setMessages(prev => [...prev, errorMessage]);
+  } finally {
+    setLoading(false);
+    setQuestion("");
+  }
+};
 
   const clearChat = () => {
     if (window.confirm("Clear chat history for this document?")) {
@@ -272,7 +248,7 @@ export default function ChatBox({ selectedDocumentId, chatHistory = [], setChatH
                         <div className="relative">
                           <div className="flex items-start justify-between gap-3">
                             <p className="text-gray-100 text-sm sm:text-base leading-relaxed break-words flex-1">
-                              {m.data.data.answer}
+                              {m.data?.answer}
                             </p>
                             <button
                               onClick={() => copyToClipboard(m.data.answer, i)}

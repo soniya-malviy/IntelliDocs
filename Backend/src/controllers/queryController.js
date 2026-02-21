@@ -69,13 +69,15 @@ export const queryDocument = async (req, res) => {
 
     const pythonProcess = spawn(pythonExecutable, [
       scriptPath,
-      JSON.stringify(question),  // Stringify to handle spaces/special chars
+      question,  // Stringify to handle spaces/special chars
       docId
     ], {
-      cwd: projectRoot
+      cwd: path.join(projectRoot, "ai-agent")
     });
 
     let timedOut = false;
+    let output = "";
+    let errorOutput = "";
 
     // Set a timeout for the Python process
     const timeout = setTimeout(() => {
@@ -94,9 +96,6 @@ export const queryDocument = async (req, res) => {
     pythonProcess.stdout.on('data', (data) => {
       output += data.toString();
     });
-
-    let output = ""
-let errorOutput = ""
 
     pythonProcess.stderr.on('data', (data) => {
       errorOutput += data.toString();
@@ -125,8 +124,12 @@ let errorOutput = ""
         });
       }
 
-      try {
-        const result = JSON.parse(output);
+        try {
+          const result = JSON.parse(output);
+
+          // Skip the document status check - it's causing the error
+          // The Python script handles document processing state
+          
 
         // Handle explicit errors from Python script
         if (result.status === 'error') {
