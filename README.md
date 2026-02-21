@@ -4,7 +4,7 @@ IntelliDocs is a **full-stack Retrieval-Augmented Generation (RAG) system** that
 
 The project combines a **MERN stack backend**, a **modern React frontend**, and a **Python-based AI pipeline** using embeddings and FAISS for semantic search.
 
-
+DEMO VIDEO: https://www.loom.com/share/869179c03b3e437da3b7848710e09319
 
 ## Features
 
